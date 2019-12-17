@@ -23,4 +23,18 @@ class Task < Post
     deadline = "Крайний срок: #{@due_date}"
     [deadline, @text, time_string]
   end
+
+  def to_db_hash
+    super.merge(
+        {
+            'text' => @text,
+            'due_date' => @due_date.strftime("%Y.%m.%d, %H:%M:%S")
+        }
+    )
+  end
+
+  def load_data(data_hash)
+    super(data_hash)
+    @due_date = Date.parse(data_hash['due_date'])
+  end
 end
