@@ -16,7 +16,12 @@ class Post
     return if id.nil?
     db = SQLite3::Database.open(@@SQLITE_DB_FILE)
     db.results_as_hash = true
-    result = db.execute("SELECT * FROM posts WHERE rowid = ?", id)
+    begin
+      result = db.execute("SELECT * FROM posts WHERE rowid = ?", id)
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
     db.close
 
     return nil if result.empty?
@@ -37,11 +42,22 @@ class Post
 
     query += "LIMIT :limit " unless limit.nil?
 
-    statement = db.prepare(query)
+    begin
+      statement = db.prepare(query)
+    rescue SQLite3::SQLException => e
+      puts 'Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}'
+      abort e.message
+    end
+
     statement.bind_param('type', type) unless type.nil?
     statement.bind_param('limit', limit) unless limit.nil?
 
-    result = statement.execute!
+    begin
+      result = statement.execute!
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
     statement.close
     db.close
 
@@ -81,20 +97,25 @@ class Post
     db = SQLite3::Database.open(@@SQLITE_DB_FILE)
     db.results_as_hash = true
 
-    db.execute(
-        "INSERT INTO posts (" +
-            to_db_hash.keys.join(', ') +
-            ") " +
-            " VALUES ( " +
-            ('?,' * to_db_hash.keys.size).chomp(',') +
-            ")",
-        to_db_hash.values
-    )
+    begin
+      db.execute(
+          "INSERT INTO posts (" +
+              to_db_hash.keys.join(', ') +
+              ") " +
+              " VALUES ( " +
+              ('?,' * to_db_hash.keys.size).chomp(',') +
+              ")",
+          to_db_hash.values
+      )
 
-    insert_row_id = db.last_insert_row_id
-    db.close
+      insert_row_id = db.last_insert_row_id
+      db.close
 
-    insert_row_id
+      insert_row_id
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
   end
 
   def to_db_hash
